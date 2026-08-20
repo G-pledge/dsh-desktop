@@ -43,9 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-desktop-mac
-          path: |
-            dist/*.dmg
-            dist/*.zip
+          path: dist/*.dmg
           if-no-files-found: error
 
   publish:
@@ -71,6 +69,6 @@ jobs:
           makeLatest: true
           artifacts: "out/*.zip,out/*.dmg"
           body: |
-            Windows：下载 `DeepSeek-Harness-*-win-x64.zip`，解压后运行 `启动.bat`。
+            Windows：下载 zip，解压后直接运行 `DeepSeek Harness.exe`。
             macOS：下载 dmg，拖到应用程序。未签名，请右键图标选择「打开」。
             都需要本机已安装 Node.js 22.19+ / 24+。

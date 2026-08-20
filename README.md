@@ -4,7 +4,7 @@ DeepSeek Harness（dsh）的桌面壳。独立窗口打开本地界面，关窗�
 
 需要 Node.js 22.19+ / 24+，以及 DeepSeek API Key。
 
-安装包在 [Releases](https://github.com/G-pledge/dsh-desktop/releases)：**Windows 下 zip，Mac 下 dmg**。推进 `main` 后会自动打包并挂上去。
+安装包在 [Releases](https://github.com/G-pledge/dsh-desktop/releases)：**Windows 下 zip（解压后直接开 exe），Mac 下 dmg**。推进 `main` 后会自动打包并挂上去。
 
 ```bat
 npm install
@@ -17,7 +17,7 @@ Windows 本地打包：
 npm run pack
 ```
 
-跑 `dist\启动.bat`，或者直接开 `dist\win-unpacked\DeepSeek Harness.exe`。
+跑 `dist\启动.bat`，或者直接开 `dist\win-unpacked\DeepSeek Harness.exe`。Release 里的 Windows zip 解压后直接运行 exe。
 
 Mac 本地打包（要在 Mac 上）：
 
