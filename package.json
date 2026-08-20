@@ -1,0 +1,52 @@
+{
+  "name": "dsh-desktop",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness 桌面壳：内置窗口打开本地 dsh 界面",
+  "main": "src/main.js",
+  "author": "dsh-desktop",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --win dir && node scripts/copy-config.mjs"
+  },
+  "build": {
+    "appId": "local.dsh.desktop",
+    "productName": "DeepSeek Harness",
+    "copyright": "MIT",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.ico",
+      "build/tray.png",
+      "build/icon-64.png",
+      "config.example.json",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signExecutable": false
+    },
+    "nsis": {
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "compression": "normal",
+    "asar": true
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12",
+    "png-to-ico": "^3.0.2"
+  }
+}
