@@ -6,8 +6,12 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 
-if (process.platform === "win32") {
-  app.setAppUserModelId("local.dsh.desktop");
+const IS_WIN = process.platform === "win32";
+const IS_MAC = process.platform === "darwin";
+const NODE_BIN = IS_WIN ? "node.exe" : "node";
+
+if (IS_WIN) {
+  app.setAppUserModelId("com.gpledge.dsh-desktop");
 }
 
 const READY_MS = 12 * 60 * 1000;
@@ -42,7 +46,10 @@ function expandHome(p) {
 
 function appDir() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
-  if (app.isPackaged) return path.dirname(process.execPath);
+  if (app.isPackaged) {
+    if (IS_MAC) return app.getPath("userData");
+    return path.dirname(process.execPath);
+  }
   return path.resolve(__dirname, "..");
 }
 
@@ -58,6 +65,7 @@ function defaults() {
 
 function loadConfig() {
   const root = appDir();
+  fs.mkdirSync(root, { recursive: true });
   const file = path.join(root, "config.json");
   const example = path.join(root, "config.example.json");
   const bundled = path.join(__dirname, "..", "config.example.json");
@@ -87,30 +95,66 @@ function loadConfig() {
   };
 }
 
+function dirHasNode(dir) {
+  if (!dir) return "";
+  if (fs.existsSync(path.join(dir, NODE_BIN))) return dir;
+  if (fs.existsSync(path.join(dir, "bin", NODE_BIN))) return path.join(dir, "bin");
+  return "";
+}
+
+function nvmBins() {
+  const nvmDir = process.env.NVM_DIR || path.join(os.homedir(), ".nvm");
+  const versions = path.join(nvmDir, "versions", "node");
+  if (!fs.existsSync(versions)) return [];
+  try {
+    return fs
+      .readdirSync(versions)
+      .sort()
+      .reverse()
+      .map((name) => path.join(versions, name, "bin"));
+  } catch {
+    return [];
+  }
+}
+
 function findNode(preferred) {
   const extra = [
     preferred,
     process.env.DSH_NODE_DIR,
-    process.env.ProgramFiles && path.join(process.env.ProgramFiles, "nodejs"),
-    process.env["ProgramFiles(x86)"] && path.join(process.env["ProgramFiles(x86)"], "nodejs"),
+    IS_WIN && process.env.ProgramFiles && path.join(process.env.ProgramFiles, "nodejs"),
+    IS_WIN && process.env["ProgramFiles(x86)"] && path.join(process.env["ProgramFiles(x86)"], "nodejs"),
+    "/opt/homebrew",
+    "/usr/local",
+    "/usr",
+    path.join(os.homedir(), ".volta", "bin"),
+    path.join(os.homedir(), ".local"),
+    ...nvmBins(),
   ];
   for (const dir of extra) {
-    if (dir && fs.existsSync(path.join(dir, "node.exe"))) return dir;
+    const found = dirHasNode(dir);
+    if (found) return found;
   }
-  for (const dir of String(process.env.PATH || "").split(";")) {
-    if (dir && fs.existsSync(path.join(dir, "node.exe"))) return dir;
+  for (const dir of String(process.env.PATH || "").split(path.delimiter)) {
+    const found = dirHasNode(dir);
+    if (found) return found;
   }
   return "";
 }
 
 function findNpx(nodeDir) {
-  const nodeExe = path.join(nodeDir, "node.exe");
-  const npxCli = path.join(nodeDir, "node_modules", "npm", "bin", "npx-cli.js");
-  const npxCmd = path.join(nodeDir, "npx.cmd");
-  if (fs.existsSync(npxCli) && fs.existsSync(nodeExe)) {
-    return { cmd: nodeExe, prefix: [npxCli] };
+  const nodePath = path.join(nodeDir, NODE_BIN);
+  const cliHere = path.join(nodeDir, "node_modules", "npm", "bin", "npx-cli.js");
+  const cliLib = path.join(nodeDir, "..", "lib", "node_modules", "npm", "bin", "npx-cli.js");
+  if (fs.existsSync(nodePath) && fs.existsSync(cliHere)) {
+    return { cmd: nodePath, prefix: [cliHere] };
   }
-  if (fs.existsSync(npxCmd)) return { cmd: npxCmd, prefix: [] };
+  if (fs.existsSync(nodePath) && fs.existsSync(cliLib)) {
+    return { cmd: nodePath, prefix: [cliLib] };
+  }
+  const npxCmd = path.join(nodeDir, "npx.cmd");
+  if (IS_WIN && fs.existsSync(npxCmd)) return { cmd: npxCmd, prefix: [] };
+  const npx = path.join(nodeDir, "npx");
+  if (fs.existsSync(npx)) return { cmd: npx, prefix: [] };
   return null;
 }
 
@@ -145,14 +189,16 @@ function freePort() {
 
 function killTree(proc) {
   if (!proc || !proc.pid) return;
-  if (process.platform === "win32") {
+  if (IS_WIN) {
     spawn("taskkill", ["/pid", String(proc.pid), "/T", "/F"], {
       windowsHide: true,
       stdio: "ignore",
     });
     return;
   }
-  proc.kill("SIGTERM");
+  spawn("sh", ["-c", "pkill -TERM -P " + proc.pid + "; kill -TERM " + proc.pid], {
+    stdio: "ignore",
+  });
 }
 
 function asset(...parts) {
@@ -165,7 +211,7 @@ function asset(...parts) {
 }
 
 function trayImage() {
-  const png = asset("build", "tray.png") || asset("build", "icon-64.png");
+  const png = asset("build", "tray.png") || asset("build", "icon-64.png") || asset("build", "icon.png");
   if (png) {
     const img = nativeImage.createFromPath(png);
     if (!img.isEmpty()) return img;
@@ -183,6 +229,7 @@ function showWin() {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
+  if (IS_MAC) app.dock.show();
 }
 
 function quitApp() {
@@ -196,6 +243,29 @@ function quitApp() {
     tray = null;
   }
   app.quit();
+}
+
+function makeMenu() {
+  if (!IS_MAC) {
+    Menu.setApplicationMenu(null);
+    return;
+  }
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { label: "退出", accelerator: "Cmd+Q", click: quitApp },
+        ],
+      },
+      { role: "editMenu" },
+      { role: "windowMenu" },
+    ]),
+  );
 }
 
 function makeTray() {
@@ -213,6 +283,17 @@ function makeTray() {
   tray.on("double-click", showWin);
 }
 
+function pathExtra(nodeDir) {
+  const parts = [nodeDir];
+  if (IS_WIN) {
+    parts.push(path.join(process.env.APPDATA || "", "npm"));
+  } else {
+    parts.push("/opt/homebrew/bin", "/usr/local/bin", path.join(os.homedir(), ".npm"));
+  }
+  parts.push(process.env.PATH || "");
+  return parts.filter(Boolean).join(path.delimiter);
+}
+
 function startDsh(nodeDir, npx, port) {
   fs.mkdirSync(cfg.dshHome, { recursive: true });
   fs.mkdirSync(cfg.npmCache, { recursive: true });
@@ -221,7 +302,7 @@ function startDsh(nodeDir, npx, port) {
     ...process.env,
     DSH_HOME: cfg.dshHome,
     npm_config_cache: cfg.npmCache,
-    PATH: nodeDir + ";" + path.join(process.env.APPDATA || "", "npm") + ";" + (process.env.PATH || ""),
+    PATH: pathExtra(nodeDir),
   };
   delete env.ELECTRON_RUN_AS_NODE;
 
@@ -292,8 +373,8 @@ function startDsh(nodeDir, npx, port) {
 }
 
 function makeWindow() {
-  Menu.setApplicationMenu(null);
-  const icon = asset("build", "icon.ico");
+  makeMenu();
+  const icon = IS_WIN ? asset("build", "icon.ico") : asset("build", "icon.png") || asset("build", "icon-64.png");
   win = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -302,7 +383,7 @@ function makeWindow() {
     title: "DeepSeek Harness",
     backgroundColor: "#111318",
     icon: icon || undefined,
-    autoHideMenuBar: true,
+    autoHideMenuBar: !IS_MAC,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -378,6 +459,7 @@ if (!app.requestSingleInstanceLock()) {
       pushLog("\n" + (e.stack || e) + "\n");
     });
   });
+  app.on("activate", showWin);
 }
 
 app.on("before-quit", () => {

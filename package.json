@@ -1,14 +1,16 @@
 {
   "name": "dsh-desktop",
   "version": "1.0.0",
-  "description": "DeepSeek Harness Windows desktop shell",
+  "description": "DeepSeek Harness desktop shell",
   "main": "src/main.js",
   "author": "G-pledge",
   "license": "MIT",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --win dir && node scripts/copy-config.mjs"
+    "pack": "electron-builder --win dir && node scripts/copy-config.mjs",
+    "pack:win": "electron-builder --win dir && node scripts/copy-config.mjs",
+    "pack:mac": "electron-builder --mac"
   },
   "build": {
     "appId": "com.gpledge.dsh-desktop",
@@ -19,6 +21,7 @@
     "files": [
       "src/**/*",
       "build/icon.ico",
+      "build/icon.png",
       "build/tray.png",
       "build/icon-64.png",
       "config.example.json",
@@ -33,6 +36,24 @@
         }
       ],
       "signExecutable": false
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "artifactName": "${productName}-${version}-mac.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
+        }
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
     },
     "asar": true
   },
