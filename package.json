@@ -8,10 +8,10 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --win dir && node scripts/copy-config.mjs",
-    "pack:win": "electron-builder --win dir && node scripts/copy-config.mjs",
+    "pack": "electron-builder --win dir --publish never && node scripts/copy-config.mjs",
+    "pack:win": "electron-builder --win dir --publish never && node scripts/copy-config.mjs",
     "zip:win": "node scripts/zip-win.mjs",
-    "pack:mac": "electron-builder --mac"
+    "pack:mac": "electron-builder --mac --publish never"
   },
   "build": {
     "appId": "com.gpledge.dsh-desktop",
@@ -19,6 +19,7 @@
     "directories": {
       "output": "dist"
     },
+    "publish": null,
     "files": [
       "src/**/*",
       "build/icon.ico",
