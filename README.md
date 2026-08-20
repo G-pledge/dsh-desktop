@@ -1,6 +1,6 @@
-# dsh-desktop
+# DeepSeek Harness Windows 桌面版（Electron）
 
-DeepSeek Harness 的 Windows 桌面壳。独立窗口，关窗口进托盘。
+DeepSeek Harness（dsh）的 Windows 桌面壳。独立窗口打开本地界面，关窗口进系统托盘。
 
 需要 Node.js 22.19+ / 24+，以及 DeepSeek API Key。
 
