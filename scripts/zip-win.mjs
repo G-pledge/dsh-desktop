@@ -10,7 +10,19 @@ if (!fs.existsSync(unpacked)) {
   process.exit(1);
 }
 
-for (const name of ["config.json", "config.example.json"]) {
+const extra = [
+  "config.json",
+  "config.example.json",
+  "LICENSE.electron.txt",
+  "LICENSES.chromium.html",
+  "vk_swiftshader.dll",
+  "vk_swiftshader_icd.json",
+  "vulkan-1.dll",
+  "dxcompiler.dll",
+  "dxil.dll",
+];
+
+for (const name of extra) {
   const file = path.join(unpacked, name);
   if (fs.existsSync(file)) fs.unlinkSync(file);
 }
