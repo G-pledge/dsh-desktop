@@ -41,4 +41,4 @@ Mac 安装包没签名，第一次打开要在访达里右键图标选「打开�
 
 `nodeDir` / `npmCache` 空着就自动找。`port` 填 `0` 表示随便占一个。
 
-点关闭进托盘，托盘右键退出。Mac 也可用菜单栏 DeepSeek Harness → 退出，或 Command+Q。
+点 × 会问你：最小化到托盘，还是退出。托盘右键也可以退出。Mac 也可用菜单栏 DeepSeek Harness → 退出，或 Command+Q。

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const http = require("http");
@@ -21,6 +21,7 @@ let win;
 let tray;
 let child;
 let quitting = false;
+let askingClose = false;
 let cfg;
 
 function alive() {
@@ -413,7 +414,28 @@ function makeWindow() {
   win.on("close", (e) => {
     if (quitting) return;
     e.preventDefault();
-    win.hide();
+    if (askingClose) return;
+    askingClose = true;
+    dialog
+      .showMessageBox(win, {
+        type: "question",
+        buttons: ["最小化到托盘", "退出", "取消"],
+        defaultId: 0,
+        cancelId: 2,
+        noLink: true,
+        title: "DeepSeek Harness",
+        message: "要关闭窗口吗？",
+        detail: "最小化后程序继续在托盘运行。",
+      })
+      .then(({ response }) => {
+        askingClose = false;
+        if (!alive()) return;
+        if (response === 0) win.hide();
+        else if (response === 1) quitApp();
+      })
+      .catch(() => {
+        askingClose = false;
+      });
   });
 
   win.on("closed", () => {
