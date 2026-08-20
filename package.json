@@ -10,6 +10,7 @@
     "start": "electron .",
     "pack": "electron-builder --win dir && node scripts/copy-config.mjs",
     "pack:win": "electron-builder --win dir && node scripts/copy-config.mjs",
+    "zip:win": "node scripts/zip-win.mjs",
     "pack:mac": "electron-builder --mac"
   },
   "build": {

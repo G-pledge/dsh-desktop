@@ -4,12 +4,14 @@ DeepSeek Harness（dsh）的桌面壳。独立窗口打开本地界面，关窗�
 
 需要 Node.js 22.19+ / 24+，以及 DeepSeek API Key。
 
+安装包在 [Releases](https://github.com/G-pledge/dsh-desktop/releases)：**Windows 下 zip，Mac 下 dmg**。推进 `main` 后会自动打包并挂上去。
+
 ```bat
 npm install
 npm start
 ```
 
-Windows 打包：
+Windows 本地打包：
 
 ```bat
 npm run pack
@@ -17,15 +19,15 @@ npm run pack
 
 跑 `dist\启动.bat`，或者直接开 `dist\win-unpacked\DeepSeek Harness.exe`。
 
-Mac 打包要在 Mac 上，或者等 GitHub Actions 打好。开 PR、推进 `main`，或打 `v*` 标签都会自动打包。跑完后到这次运行页面底下下载 `dsh-desktop-mac`：
+Mac 本地打包（要在 Mac 上）：
 
 ```bash
 npm run pack:mac
 ```
 
-会生成 `dist` 里的 dmg / zip。没签名，第一次打开要在访达里右键图标选「打开」。
+Mac 安装包没签名，第一次打开要在访达里右键图标选「打开」。
 
-`config.json` 第一次会自动生成。Windows 放 exe 旁边，Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。仓库里只有 `config.example.json`，别把自己的配置提交上去。
+`config.json` 第一次会自动生成。Windows 放解压后的 exe 旁边，Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。仓库里只有 `config.example.json`，别把自己的配置提交上去。
 
 ```json
 {

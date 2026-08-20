@@ -1,0 +1,76 @@
+name: release
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run pack:win
+      - run: npm run zip:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-win
+          path: dist/DeepSeek-Harness-*-win-x64.zip
+          if-no-files-found: error
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run pack:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-mac
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, mac]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Version
+        id: ver
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          commit: ${{ github.sha }}
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
+          artifacts: "out/*.zip,out/*.dmg"
+          body: |
+            Windows：下载 `DeepSeek-Harness-*-win-x64.zip`，解压后运行 `启动.bat`。
+            macOS：下载 dmg，拖到应用程序。未签名，请右键图标选择「打开」。
+            都需要本机已安装 Node.js 22.19+ / 24+。
