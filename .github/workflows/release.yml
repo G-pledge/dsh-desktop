@@ -69,6 +69,6 @@ jobs:
           makeLatest: true
           artifacts: "out/*.zip,out/*.dmg"
           body: |
-            Windows：下载 zip，解压后直接运行 `DeepSeek Harness.exe`。
+            Windows：下载 zip，解压后直接运行 `DeepSeek Harness.exe`。同目录的 `config.json` 可改数据路径。
             macOS：下载 dmg，拖到应用程序。未签名，请右键图标选择「打开」。
             都需要本机已安装 Node.js 22.19+ / 24+。

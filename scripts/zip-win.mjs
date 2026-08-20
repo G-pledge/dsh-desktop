@@ -11,7 +11,6 @@ if (!fs.existsSync(unpacked)) {
 }
 
 const extra = [
-  "config.json",
   "config.example.json",
   "LICENSE.electron.txt",
   "LICENSES.chromium.html",
@@ -26,6 +25,9 @@ for (const name of extra) {
   const file = path.join(unpacked, name);
   if (fs.existsSync(file)) fs.unlinkSync(file);
 }
+
+const example = fs.readFileSync(path.resolve("config.example.json"), "utf8").replace(/^\uFEFF/, "");
+fs.writeFileSync(path.join(unpacked, "config.json"), example);
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const zipName = "DeepSeek-Harness-" + pkg.version + "-win-x64.zip";

@@ -27,7 +27,7 @@ npm run pack:mac
 
 Mac 安装包没签名，第一次打开要在访达里右键图标选「打开」。
 
-`config.json` 第一次会自动生成。Windows 放解压后的 exe 旁边，Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。仓库里只有 `config.example.json`，别把自己的配置提交上去。
+`config.json` 第一次会自动生成。Windows Release 解压后 exe 旁边就有一份，可直接改。Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。仓库里不要提交你自己的 `config.json`。
 
 ```json
 {
