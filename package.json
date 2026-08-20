@@ -1,9 +1,9 @@
 {
   "name": "dsh-desktop",
   "version": "1.0.0",
-  "description": "DeepSeek Harness 桌面壳：内置窗口打开本地 dsh 界面",
+  "description": "DeepSeek Harness Windows desktop shell",
   "main": "src/main.js",
-  "author": "dsh-desktop",
+  "author": "G-pledge",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -11,9 +11,8 @@
     "pack": "electron-builder --win dir && node scripts/copy-config.mjs"
   },
   "build": {
-    "appId": "local.dsh.desktop",
+    "appId": "com.gpledge.dsh-desktop",
     "productName": "DeepSeek Harness",
-    "copyright": "MIT",
     "directories": {
       "output": "dist"
     },
@@ -30,18 +29,11 @@
       "target": [
         {
           "target": "dir",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
       "signExecutable": false
     },
-    "nsis": {
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
-    },
-    "compression": "normal",
     "asar": true
   },
   "devDependencies": {

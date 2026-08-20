@@ -3,56 +3,50 @@ import path from "node:path";
 import { PNG } from "pngjs";
 import pngToIco from "png-to-ico";
 
-const srcPath = "build/icon.png";
-const src = PNG.sync.read(fs.readFileSync(srcPath));
+const src = PNG.sync.read(fs.readFileSync("build/icon.png"));
 
-function bbox(png, alphaMin = 20) {
-  let minX = png.width;
-  let minY = png.height;
-  let maxX = 0;
-  let maxY = 0;
-  for (let y = 0; y < png.height; y += 1) {
-    for (let x = 0; x < png.width; x += 1) {
-      if (png.data[(y * png.width + x) * 4 + 3] > alphaMin) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
+function bbox(png, minA = 20) {
+  let x0 = png.width, y0 = png.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      if (png.data[(y * png.width + x) * 4 + 3] > minA) {
+        if (x < x0) x0 = x;
+        if (y < y0) y0 = y;
+        if (x > x1) x1 = x;
+        if (y > y1) y1 = y;
       }
     }
   }
-  if (maxX <= minX || maxY <= minY) {
-    throw new Error("no opaque pixels");
-  }
-  return { minX, minY, maxX, maxY };
+  if (x1 <= x0 || y1 <= y0) throw new Error("no opaque pixels");
+  return { x0, y0, x1, y1 };
 }
 
-function fitWhale(srcPng, size, padRatio = 0.04) {
-  const { minX, minY, maxX, maxY } = bbox(srcPng);
-  const cropW = maxX - minX + 1;
-  const cropH = maxY - minY + 1;
+function fit(srcPng, size, padRatio = 0.04) {
+  const { x0, y0, x1, y1 } = bbox(srcPng);
+  const cw = x1 - x0 + 1;
+  const ch = y1 - y0 + 1;
   const pad = Math.max(1, Math.round(size * padRatio));
   const inner = size - pad * 2;
-  const scale = Math.min(inner / cropW, inner / cropH);
-  const drawW = Math.max(1, Math.round(cropW * scale));
-  const drawH = Math.max(1, Math.round(cropH * scale));
-  const ox = Math.round((size - drawW) / 2);
-  const oy = Math.round((size - drawH) / 2);
+  const scale = Math.min(inner / cw, inner / ch);
+  const dw = Math.max(1, Math.round(cw * scale));
+  const dh = Math.max(1, Math.round(ch * scale));
+  const ox = Math.round((size - dw) / 2);
+  const oy = Math.round((size - dh) / 2);
   const out = new PNG({ width: size, height: size, colorType: 6 });
 
-  for (let y = 0; y < drawH; y += 1) {
-    const sy = minY + Math.min(cropH - 1, Math.floor(y / scale));
-    for (let x = 0; x < drawW; x += 1) {
-      const sx = minX + Math.min(cropW - 1, Math.floor(x / scale));
+  for (let y = 0; y < dh; y++) {
+    const sy = y0 + Math.min(ch - 1, Math.floor(y / scale));
+    for (let x = 0; x < dw; x++) {
+      const sx = x0 + Math.min(cw - 1, Math.floor(x / scale));
       const si = (sy * srcPng.width + sx) * 4;
       const di = ((oy + y) * size + (ox + x)) * 4;
-      const alpha = srcPng.data[si + 3];
-      if (size <= 32 && alpha > 80) {
+      const a = srcPng.data[si + 3];
+      if (size <= 32 && a > 80) {
         out.data[di] = 62;
         out.data[di + 1] = 224;
         out.data[di + 2] = 232;
         out.data[di + 3] = 255;
-      } else if (alpha > 16) {
+      } else if (a > 16) {
         out.data[di] = srcPng.data[si];
         out.data[di + 1] = srcPng.data[si + 1];
         out.data[di + 2] = srcPng.data[si + 2];
@@ -63,22 +57,16 @@ function fitWhale(srcPng, size, padRatio = 0.04) {
   return out;
 }
 
-const master = fitWhale(src, 1024, 0.04);
-fs.writeFileSync("build/icon.png", PNG.sync.write(master));
+fs.writeFileSync("build/icon.png", PNG.sync.write(fit(src, 1024)));
 
 const sizes = [16, 24, 32, 48, 64, 128, 256];
 const files = [];
-for (const size of sizes) {
-  const png = fitWhale(src, size, size <= 32 ? 0.02 : 0.04);
-  const file = path.join("build", `icon-${size}.png`);
-  fs.writeFileSync(file, PNG.sync.write(png));
+for (const n of sizes) {
+  const file = path.join("build", `icon-${n}.png`);
+  fs.writeFileSync(file, PNG.sync.write(fit(src, n, n <= 32 ? 0.02 : 0.04)));
   files.push(file);
 }
 
-const tray = fitWhale(src, 64, 0.02);
-fs.writeFileSync("build/tray.png", PNG.sync.write(tray));
-
-const buf = await pngToIco(files);
-fs.writeFileSync("build/icon.ico", buf);
-console.log(`wrote build/icon.ico (${buf.length} bytes) sizes=${sizes.join(",")}`);
-console.log("wrote build/tray.png and enlarged build/icon.png");
+fs.writeFileSync("build/tray.png", PNG.sync.write(fit(src, 64, 0.02)));
+fs.writeFileSync("build/icon.ico", await pngToIco(files));
+console.log("icon.ico ok");

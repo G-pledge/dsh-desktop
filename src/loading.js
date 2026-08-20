@@ -1,11 +1,11 @@
 const statusEl = document.getElementById("status");
 const logEl = document.getElementById("log");
 
-window.dshDesktop.onStatus((text) => {
-  statusEl.textContent = text;
+window.dshDesktop.onStatus((t) => {
+  statusEl.textContent = t;
 });
 
-window.dshDesktop.onLog((text) => {
-  logEl.textContent += text;
+window.dshDesktop.onLog((t) => {
+  logEl.textContent += t;
   logEl.scrollTop = logEl.scrollHeight;
 });

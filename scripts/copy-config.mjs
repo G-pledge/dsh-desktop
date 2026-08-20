@@ -5,26 +5,21 @@ const dist = path.resolve("dist");
 const unpacked = path.join(dist, "win-unpacked");
 const src = path.resolve("config.example.json");
 
-if (!fs.existsSync(dist) || !fs.existsSync(unpacked)) {
-  console.log("skip copy-config: dist/win-unpacked missing");
+if (!fs.existsSync(unpacked)) {
+  console.log("dist/win-unpacked 不存在，先 npm run pack");
   process.exit(0);
 }
 
 const text = fs.readFileSync(src, "utf8").replace(/^\uFEFF/, "");
-fs.writeFileSync(path.join(dist, "config.example.json"), text, "utf8");
-fs.writeFileSync(path.join(unpacked, "config.example.json"), text, "utf8");
+fs.writeFileSync(path.join(dist, "config.example.json"), text);
+fs.writeFileSync(path.join(unpacked, "config.example.json"), text);
 
 for (const dir of [dist, unpacked]) {
-  const configPath = path.join(dir, "config.json");
-  if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath, text, "utf8");
-  }
+  const file = path.join(dir, "config.json");
+  if (!fs.existsSync(file)) fs.writeFileSync(file, text);
 }
 
-const bat = `@echo off
-cd /d "%~dp0win-unpacked"
-start "" "DeepSeek Harness.exe"
-`;
-fs.writeFileSync(path.join(dist, "启动.bat"), bat, "utf8");
-
-console.log("fast launch ready: use dist\\启动.bat or dist\\win-unpacked\\DeepSeek Harness.exe");
+fs.writeFileSync(
+  path.join(dist, "启动.bat"),
+  `@echo off\r\ncd /d "%~dp0win-unpacked"\r\nstart "" "DeepSeek Harness.exe"\r\n`,
+);
