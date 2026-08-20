@@ -17,7 +17,7 @@ npm run pack
 
 跑 `dist\启动.bat`，或者直接开 `dist\win-unpacked\DeepSeek Harness.exe`。
 
-Mac 打包要在 Mac 上，或者用 GitHub Actions（Actions 里手动跑 `mac` 这个工作流）：
+Mac 打包要在 Mac 上，或者等 GitHub Actions 打好。开 PR、推进 `main`，或打 `v*` 标签都会自动打包。跑完后到这次运行页面底下下载 `dsh-desktop-mac`：
 
 ```bash
 npm run pack:mac
