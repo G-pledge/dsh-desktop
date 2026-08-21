@@ -3,7 +3,26 @@ import path from "node:path";
 import { PNG } from "pngjs";
 import pngToIco from "png-to-ico";
 
-const src = PNG.sync.read(fs.readFileSync("build/icon.png"));
+const srcPath = fs.existsSync("build/icon-src.png") ? "build/icon-src.png" : "build/icon.png";
+const src = knockoutLight(PNG.sync.read(fs.readFileSync(srcPath)));
+
+function knockoutLight(png) {
+  const out = new PNG({ width: png.width, height: png.height, colorType: 6 });
+  for (let i = 0; i < png.data.length; i += 4) {
+    const r = png.data[i];
+    const g = png.data[i + 1];
+    const b = png.data[i + 2];
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (lum >= 230) continue;
+    const a = Math.round(255 * Math.max(0, 1 - lum / 210));
+    if (a < 10) continue;
+    out.data[i] = 0;
+    out.data[i + 1] = 0;
+    out.data[i + 2] = 0;
+    out.data[i + 3] = a;
+  }
+  return out;
+}
 
 function bbox(png, minA = 20) {
   let x0 = png.width, y0 = png.height, x1 = 0, y1 = 0;
@@ -41,16 +60,11 @@ function fit(srcPng, size, padRatio = 0.04) {
       const si = (sy * srcPng.width + sx) * 4;
       const di = ((oy + y) * size + (ox + x)) * 4;
       const a = srcPng.data[si + 3];
-      if (size <= 32 && a > 80) {
-        out.data[di] = 62;
-        out.data[di + 1] = 224;
-        out.data[di + 2] = 232;
-        out.data[di + 3] = 255;
-      } else if (a > 16) {
+      if (a > 16) {
         out.data[di] = srcPng.data[si];
         out.data[di + 1] = srcPng.data[si + 1];
         out.data[di + 2] = srcPng.data[si + 2];
-        out.data[di + 3] = srcPng.data[si + 3];
+        out.data[di + 3] = a;
       }
     }
   }
