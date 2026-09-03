@@ -27,7 +27,9 @@ for (const name of extra) {
 }
 
 const example = fs.readFileSync(path.resolve("config.example.json"), "utf8").replace(/^\uFEFF/, "");
-fs.writeFileSync(path.join(unpacked, "config.json"), example);
+const configPath = path.join(unpacked, "config.json");
+const backup = fs.existsSync(configPath) ? fs.readFileSync(configPath) : null;
+fs.writeFileSync(configPath, example);
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const zipName = "DeepSeek-Harness-" + pkg.version + "-win-x64.zip";
@@ -39,7 +41,11 @@ const result = spawnSync("tar", ["-C", unpacked, "-a", "-c", "-f", zipPath, "."]
 });
 
 if (result.status !== 0) {
+  if (backup) fs.writeFileSync(configPath, backup);
   process.exit(result.status || 1);
 }
+
+if (backup) fs.writeFileSync(configPath, backup);
+else fs.writeFileSync(configPath, example);
 
 console.log(zipPath);

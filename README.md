@@ -35,10 +35,13 @@ Mac 安装包没签名，第一次打开要在访达里右键图标选「打开�
   "npmCache": "",
   "nodeDir": "",
   "host": "127.0.0.1",
-  "port": 0
+  "port": 0,
+  "dshVersion": "0.1.1-rc.2"
 }
 ```
 
-`nodeDir` / `npmCache` 空着就自动找。`port` 填 `0` 表示随便占一个。
+`nodeDir` / `npmCache` 空着就自动找。`port` 填 `0` 表示随便占一个。`dshVersion` 是钉死的 dsh 版本，启动不会每次去追最新。托盘右键可以「检查更新」，有新版本再点更新。
+
+本机打包若不想每次把数据目录打回默认值，可在仓库根放一份 `config.user.json`（不要提交），`npm run pack` 会在 exe 旁边缺配置时用它。
 
 点 × 会问你：最小化到托盘，还是退出。托盘右键也可以退出。Mac 也可用菜单栏 DeepSeek Harness → 退出，或 Command+Q。

@@ -5,6 +5,7 @@ out/
 .DS_Store
 Thumbs.db
 config.json
+config.user.json
 build/from-*.png
 build/icon-from-*.png
 build/icon-16.png
