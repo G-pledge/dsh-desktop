@@ -56,6 +56,11 @@ jobs:
         with:
           path: out
           merge-multiple: true
+      - name: Check packages
+        run: |
+          find out -type f -print
+          test "$(find out -name '*.zip' | wc -l)" -ge 1
+          test "$(find out -name '*.dmg' | wc -l)" -ge 1
       - name: Version
         id: ver
         run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
@@ -67,7 +72,10 @@ jobs:
           allowUpdates: true
           replacesArtifacts: true
           makeLatest: true
-          artifacts: "out/*.zip,out/*.dmg"
+          artifactErrorsFailBuild: true
+          artifacts: |
+            out/**/*.zip
+            out/**/*.dmg
           body: |
             Windows：下载 zip，解压后直接运行 `DeepSeek Harness.exe`。同目录的 `config.json` 可改数据路径。
             macOS：下载 dmg，拖到应用程序。未签名，请右键图标选择「打开」。

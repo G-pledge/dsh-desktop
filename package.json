@@ -1,6 +1,6 @@
 {
   "name": "dsh-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DeepSeek Harness desktop shell",
   "main": "src/main.js",
   "author": "G-pledge",
