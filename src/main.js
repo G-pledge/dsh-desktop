@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, shell, ipcMain, webContents, WebContentsView } = require("electron");
+const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, shell, ipcMain, webContents, WebContentsView, session } = require("electron");
 const { spawn, execFileSync } = require("child_process");
 const fs = require("fs");
 const http = require("http");
@@ -101,6 +101,71 @@ ipcMain.on("dsh-download-cancel", (_e, id) => {
 
 ipcMain.on("dsh-download-show", (_e, filePath) => {
   if (filePath) shell.showItemInFolder(filePath);
+});
+
+ipcMain.on("dsh-download-folder", () => {
+  shell.openPath(app.getPath("downloads"));
+});
+
+function browserSession(partition) {
+  const name = String(partition || "");
+  if (!name.startsWith("persist:dsh-sp-")) return null;
+  return session.fromPartition(name);
+}
+
+ipcMain.handle("dsh-browser-clear", async (_event, payload) => {
+  const sess = browserSession(payload?.partition);
+  if (!sess) return { ok: false };
+  const kind = String(payload?.kind || "");
+  try {
+    if (kind === "cookies") {
+      await sess.clearStorageData({ storages: ["cookies"] });
+    } else if (kind === "cache") {
+      await sess.clearCache();
+    } else if (kind === "browsing-data") {
+      await sess.clearCache();
+      await sess.clearStorageData();
+    } else {
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+});
+
+function proxyRulesOk(rules) {
+  const text = String(rules || "").trim();
+  if (!text || text.length > 300) return false;
+  return /^(https?|socks4|socks5):\/\//i.test(text);
+}
+
+ipcMain.handle("dsh-browser-proxy", async (_event, payload) => {
+  const sess = browserSession(payload?.partition);
+  if (!sess) return { ok: false };
+  const config = payload?.config && typeof payload.config === "object" ? payload.config : {};
+  const mode = String(config.mode || "");
+  try {
+    if (mode === "direct") {
+      await sess.setProxy({ mode: "direct" });
+    } else if (mode === "system") {
+      await sess.setProxy({ mode: "system" });
+    } else if (mode === "fixed_servers") {
+      const proxyRules = String(config.proxyRules || "").trim();
+      if (!proxyRulesOk(proxyRules)) return { ok: false };
+      await sess.setProxy({
+        mode: "fixed_servers",
+        proxyRules,
+        proxyBypassRules: String(config.proxyBypassRules || "localhost,127.0.0.1,<local>").slice(0, 2000),
+      });
+    } else {
+      return { ok: false };
+    }
+    if (typeof sess.closeAllConnections === "function") sess.closeAllConnections();
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
 });
 
 function hostedBy(guest, sender) {
