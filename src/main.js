@@ -6,6 +6,7 @@ const net = require("net");
 const os = require("os");
 const path = require("path");
 const { PINNED, launcherDir, findDshBin, fetchLatest, installDsh } = require("./dsh-install");
+const { isPluginBootError, mentionedExtraBundles, parkExtraWebBundles, restoreParkedWebBundles } = require("./profile-compat");
 
 const IS_WIN = process.platform === "win32";
 const IS_MAC = process.platform === "darwin";
@@ -16,7 +17,9 @@ if (IS_WIN) {
 }
 
 const READY_MS = 30 * 60 * 1000;
-const URL_RE = /dsh web:\s+(https?:\/\/127\.0\.0\.1:\d+)/i;
+const URL_WAIT_MS = 2000;
+const DIALOG_LOG = 3500;
+const URL_RE = /dsh web:\s+(https?:\/\/127\.0\.0\.1:\d+\S*)/i;
 
 let win;
 let tray;
@@ -31,6 +34,7 @@ let cfg;
 let nodeDir = "";
 let npm;
 let latestVer = "";
+let lastParked = [];
 
 function alive() {
   return win && !win.isDestroyed();
@@ -40,8 +44,35 @@ function pushStatus(msg) {
   if (alive()) win.webContents.send("status", msg);
 }
 
+let runLog = "";
+
 function pushLog(msg) {
+  runLog += String(msg);
+  if (runLog.length > 12000) runLog = runLog.slice(-8000);
   if (alive()) win.webContents.send("log", msg);
+}
+
+function resetRunLog() {
+  runLog = "";
+}
+
+function clipText(s, n) {
+  const t = String(s || "").trim();
+  if (t.length <= n) return t;
+  return t.slice(t.length - n);
+}
+
+function parseWebUrl(text) {
+  const m = String(text || "").match(URL_RE);
+  return m ? m[1].replace(/[)>.,;]+$/, "") : "";
+}
+
+function failDetail(e) {
+  const head = e && (e.message || String(e));
+  const body = clipText(runLog || (e && e.output), DIALOG_LOG);
+  if (!body) return head || "";
+  if (head && body.includes(head)) return body;
+  return clipText((head ? head + "\n\n" : "") + body, DIALOG_LOG);
 }
 
 const dlItems = new Map();
@@ -752,7 +783,7 @@ function startDsh(bin, port) {
   fs.mkdirSync(cfg.npmCache, { recursive: true });
 
   const nodePath = path.join(nodeDir, NODE_BIN);
-  const args = [bin, "web", "--host", cfg.host, "--port", String(port), "--no-open"];
+  const args = [bin, "--profile", "web", "--host", cfg.host, "--port", String(port), "--no-open"];
   pushLog("配置文件: " + cfg.configPath + "\n");
   pushLog("dsh 版本: " + cfg.dshVersion + "\n");
   pushLog("启动命令: " + nodePath + " " + args.join(" ") + "\n");
@@ -772,25 +803,31 @@ function startDsh(bin, port) {
     const text = chunk.toString("utf8");
     buf += text;
     pushLog(text);
-    const m = buf.match(URL_RE);
-    return m ? m[1].replace(/[)>.,;]+$/, "") : "";
+    return parseWebUrl(buf);
   };
 
   return new Promise((resolve, reject) => {
     let done = false;
     let timer;
-    const stopped = () => done;
+    let httpTimer;
+
+    const fail = (msg) => {
+      const err = new Error(msg);
+      err.output = buf;
+      return err;
+    };
 
     const finish = (fn, value) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
+      clearTimeout(httpTimer);
       fn(value);
     };
 
     const bump = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => finish(reject, new Error("等待服务超时")), READY_MS);
+      timer = setTimeout(() => finish(reject, fail("等待服务超时")), READY_MS);
     };
 
     const ok = (url) => {
@@ -800,6 +837,7 @@ function startDsh(bin, port) {
       }
       done = true;
       clearTimeout(timer);
+      clearTimeout(httpTimer);
       resolve(url);
     };
 
@@ -814,18 +852,34 @@ function startDsh(bin, port) {
       const url = onData(c);
       if (url) ok(url);
     });
-    proc.on("error", (e) => finish(reject, e));
+    proc.on("error", (e) => finish(reject, fail(e.message || String(e))));
     proc.on("exit", (code) => {
-      if (child === proc) child = null;
-      if (restarting || quitting) return;
-      if (!done) finish(reject, new Error("dsh 提前退出，退出码 " + code));
-      else {
-        pushStatus("本地服务已停止");
-        quitApp();
+      const isCurrent = child === proc;
+      if (isCurrent) child = null;
+      if (quitting) return;
+      if (!done) {
+        if (isCurrent) finish(reject, fail("dsh 提前退出，退出码 " + code));
+        return;
       }
+      if (!isCurrent || restarting) return;
+      pushStatus("本地服务已停止");
+      showLoading("本地服务已停止");
     });
 
-    waitHttp("http://127.0.0.1:" + port, stopped).then(ok);
+    const probe = "http://127.0.0.1:" + port;
+    waitHttp(probe, () => done || proc.exitCode != null).then(() => {
+      if (done || proc.exitCode != null) return;
+      const announced = parseWebUrl(buf);
+      if (announced) {
+        ok(announced);
+        return;
+      }
+      httpTimer = setTimeout(() => {
+        if (done || proc.exitCode != null) return;
+        const later = parseWebUrl(buf);
+        if (later) ok(later);
+      }, URL_WAIT_MS);
+    });
   });
 }
 
@@ -849,13 +903,49 @@ async function ensureBin(version) {
   return bin;
 }
 
-async function ensureAndStart() {
+async function bootOnce() {
   const bin = await ensureBin(cfg.dshVersion);
   pushStatus("正在启动 DeepSeek Harness " + cfg.dshVersion + "…");
   const port = cfg.port > 0 ? cfg.port : await freePort();
   const url = await startDsh(bin, port);
   pushStatus("服务已就绪，正在打开界面…");
   if (alive()) await win.loadURL(url);
+}
+
+async function ensureAndStart() {
+  lastParked = [];
+  try {
+    await bootOnce();
+  } catch (e) {
+    if (!isPluginBootError(e)) throw e;
+    const named = mentionedExtraBundles(e, cfg.dshHome);
+    const parked = parkExtraWebBundles(cfg.dshHome, named.length ? named : null);
+    if (!parked.length) throw e;
+    lastParked = parked.slice();
+    pushStatus("第三方插件和新版不兼容，已暂时停用后重试…");
+    pushLog("\n已停用插件: " + parked.join(", ") + "\n\n");
+    stopDsh();
+    try {
+      await bootOnce();
+    } catch (e2) {
+      const more = parkExtraWebBundles(cfg.dshHome);
+      if (!more.length) {
+        restoreParkedWebBundles(cfg.dshHome);
+        lastParked = [];
+        throw e;
+      }
+      lastParked = lastParked.concat(more);
+      pushLog("仍起不来，继续停用: " + more.join(", ") + "\n\n");
+      stopDsh();
+      try {
+        await bootOnce();
+      } catch {
+        restoreParkedWebBundles(cfg.dshHome);
+        lastParked = [];
+        throw e;
+      }
+    }
+  }
 }
 
 async function checkLatest(opts) {
@@ -928,6 +1018,7 @@ async function updateTo(version, opts) {
   updating = true;
   refreshTray();
   showWin();
+  resetRunLog();
   try {
     await showLoading("正在更新到 " + version + "…");
     stopDsh();
@@ -935,7 +1026,22 @@ async function updateTo(version, opts) {
     await ensureAndStart();
     patchConfigFile(cfg.configPath, { dshVersion: version });
     latestVer = version;
+    if (lastParked.length) {
+      showWin();
+      dialog.showMessageBox(win, {
+        type: "info",
+        buttons: ["好"],
+        noLink: true,
+        title: "DeepSeek Harness",
+        message: "已更新到 " + version,
+        detail:
+          "这些第三方插件和新版不兼容，已暂时停用，插件文件还在：\n" +
+          lastParked.join("\n") +
+          "\n\n等插件跟上新版后，把它们加回 profiles/web/package.json 的 bundles 即可。",
+      });
+    }
   } catch (e) {
+    const detail = failDetail(e) || "没有抓到 dsh 输出。";
     cfg.dshVersion = prev;
     pushStatus("更新失败，正在回到 " + prev);
     pushLog("\n" + (e.stack || e.message || String(e)) + "\n");
@@ -950,8 +1056,8 @@ async function updateTo(version, opts) {
       buttons: ["好"],
       noLink: true,
       title: "DeepSeek Harness",
-      message: "更新失败",
-      detail: (e.message || String(e)) + "\n仍使用 " + prev,
+      message: "更新失败，仍使用 " + prev,
+      detail,
     });
   } finally {
     updating = false;
