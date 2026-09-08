@@ -70,6 +70,7 @@ jobs:
           name: ${{ steps.ver.outputs.tag }}
           commit: ${{ github.sha }}
           allowUpdates: true
+          removeArtifacts: true
           replacesArtifacts: true
           makeLatest: true
           artifactErrorsFailBuild: true
