@@ -3,7 +3,7 @@
   "version": "1.0.2",
   "description": "DeepSeek Harness desktop shell",
   "main": "src/main.js",
-  "author": "G-pledge",
+  "author": "G-pledge <eyedropyoung@gmail.com>",
   "license": "MIT",
   "private": true,
   "scripts": {
