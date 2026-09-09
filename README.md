@@ -1,10 +1,10 @@
 # DeepSeek Harness 桌面版（Electron）
 
-DeepSeek Harness（dsh）的桌面壳。独立窗口打开本地界面，关窗口进托盘。支持 Windows 和 macOS。
+DeepSeek Harness（dsh）的桌面壳。独立窗口打开本地界面，关窗口进托盘。支持 Windows、macOS、Ubuntu（deb）和 Arch（pacman）。
 
 需要 Node.js 22.19+ / 24+，以及 DeepSeek API Key。
 
-安装包在 [Releases](https://github.com/G-pledge/dsh-desktop/releases)：**Windows 下 zip（解压后直接开 exe），Mac 下 dmg**。推进 `main` 后会自动打包并挂上去。
+安装包在 [Releases](https://github.com/G-pledge/dsh-desktop/releases)：**Windows 下 zip（解压后直接开 exe），Mac 下 dmg，Ubuntu 下 deb，Arch 下 pacman**。推进 `main` 后会自动打包并挂上去。
 
 ```bat
 npm install
@@ -27,7 +27,22 @@ npm run pack:mac
 
 Mac 安装包没签名，第一次打开要在访达里右键图标选「打开」。
 
-`config.json` 第一次会自动生成。Windows Release 解压后 exe 旁边就有一份，可直接改。Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。仓库里不要提交你自己的 `config.json`。
+Linux 本地打包（要在 Linux 上）：
+
+```bash
+npm run pack:linux
+```
+
+产物在 `dist/`：Ubuntu 用 `.deb`，Arch 用 `.pacman`。
+
+```bash
+sudo apt install ./dist/DeepSeek-Harness-*-linux-x64.deb
+sudo pacman -U dist/DeepSeek-Harness-*-linux-x64.pacman
+```
+
+包没签名，安装时按提示确认即可。菜单里的命令名是 `deepseek-harness`。
+
+`config.json` 第一次会自动生成。Windows Release 解压后 exe 旁边就有一份，可直接改。Mac 放在 `~/Library/Application Support/DeepSeek Harness/`。Linux 放在 `~/.config/DeepSeek Harness/`。仓库里不要提交你自己的 `config.json`。
 
 ```json
 {

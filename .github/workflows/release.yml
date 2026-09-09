@@ -46,8 +46,27 @@ jobs:
           path: dist/*.dmg
           if-no-files-found: error
 
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pack tools
+        run: sudo apt-get update && sudo apt-get install -y fakeroot libarchive-tools
+      - run: npm ci
+      - run: npm run pack:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-linux
+          path: |
+            dist/*.deb
+            dist/*.pacman
+          if-no-files-found: error
+
   publish:
-    needs: [windows, mac]
+    needs: [windows, mac, linux]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -61,6 +80,8 @@ jobs:
           find out -type f -print
           test "$(find out -name '*.zip' | wc -l)" -ge 1
           test "$(find out -name '*.dmg' | wc -l)" -ge 1
+          test "$(find out -name '*.deb' | wc -l)" -ge 1
+          test "$(find out -name '*.pacman' | wc -l)" -ge 1
       - name: Version
         id: ver
         run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
@@ -77,7 +98,12 @@ jobs:
           artifacts: |
             out/**/*.zip
             out/**/*.dmg
+            out/**/*.deb
+            out/**/*.pacman
           body: |
             Windows：下载 zip，解压后直接运行 `DeepSeek Harness.exe`。同目录的 `config.json` 可改数据路径。
             macOS：下载 dmg，拖到应用程序。未签名，请右键图标选择「打开」。
+            Ubuntu：下载 deb，执行 `sudo apt install ./DeepSeek-Harness-*-linux-x64.deb`。
+            Arch：下载 pacman 包，执行 `sudo pacman -U DeepSeek-Harness-*-linux-x64.pacman`。
+            Linux 配置在 `~/.config/DeepSeek Harness/config.json`。
             都需要本机已安装 Node.js 22.19+ / 24+。

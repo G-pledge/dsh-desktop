@@ -11,7 +11,8 @@
     "pack": "electron-builder --win dir --publish never && node scripts/copy-config.mjs",
     "pack:win": "electron-builder --win dir --publish never && node scripts/copy-config.mjs",
     "zip:win": "node scripts/zip-win.mjs",
-    "pack:mac": "electron-builder --mac --publish never"
+    "pack:mac": "electron-builder --mac --publish never",
+    "pack:linux": "electron-builder --linux --publish never"
   },
   "build": {
     "appId": "com.gpledge.dsh-desktop",
@@ -24,6 +25,7 @@
     "files": [
       "src/**/*",
       "build/icon.ico",
+      "build/icon.png",
       "build/tray.png",
       "build/icon-64.png",
       "config.example.json",
@@ -52,6 +54,23 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "identity": null
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Development",
+      "executableName": "deepseek-harness",
+      "artifactName": "DeepSeek-Harness-${version}-linux-${arch}.${ext}",
+      "synopsis": "DeepSeek Harness desktop shell",
+      "target": [
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "pacman",
+          "arch": ["x64"]
+        }
+      ]
     },
     "asar": true
   },

@@ -415,7 +415,7 @@ function expandHome(p) {
 function appDir() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
   if (app.isPackaged) {
-    if (IS_MAC) return app.getPath("userData");
+    if (!IS_WIN) return app.getPath("userData");
     return path.dirname(process.execPath);
   }
   return path.resolve(__dirname, "..");
